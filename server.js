@@ -11,7 +11,7 @@ const app = express();
 app.use(cors());
 
 const SECRET_KEY = process.env.PAYSTACK_SECRET_KEY;
-const MONGO_URI = `mongodb+srv://${encodeURIComponent(DB_USERNAME)}:${encodeURIComponent(DB_PASSWORD)}@${DB_HOST}/${DB_NAME}?retryWrites=true&w=majority&appName=${DB_NAME}`;
+const MONGO_URI = `mongodb+srv://${encodeURIComponent(process.env.DB_USERNAME)}:${encodeURIComponent(process.env.DB_PASSWORD)}@${process.env.DB_HOST}/${process.env.DB_NAME}?retryWrites=true&w=majority&appName=${process.env.DB_NAME}`;
 
 // Create a MongoClient to connect to the server
 const connectToDb = async () => {

@@ -33,7 +33,8 @@ export { connectToDb };
 // User Schema + Model
 const userSchema = new mongoose.Schema(
   {
-    name: { type: String, required: true, trim: true },
+    firstName: { type: String, required: true, trim: true },
+    lastName: { type: String, required: true, trim: true },
     email: {
       type: String,
       required: true,
@@ -104,8 +105,23 @@ app.post(
       const { event, data } = payload;
 
       // 3) Handle events (do quick work, then ack)
-      if (event === "subscription.create") {
-        console.log("🆕 subscription.create:", JSON.stringify(data, null, 2));
+      if (event === "dedicatedaccount.assign.success") {
+        console.log(
+          "🆕 dedicatedaccount.assign.success:",
+          JSON.stringify(data, null, 2)
+        );
+
+        const userEmail = data?.customer?.email;
+        const user = await User.findOne({ email: userEmail });
+        if (!user) {
+          return res.status(404).json({ error: "User not found" });
+        }
+
+        // save dva to user
+        const dvaAccountNum = data?.dedicated_account?.account_number;
+        await User.findByIdAndUpdate(user._id, {
+          $set: { DVA_Number: dvaAccountNum },
+        });
       }
 
       if (event === "transfer.success") {
@@ -127,16 +143,19 @@ app.post(
           );
         }
 
-        // 2) DVA path: match on receiver_bank_account_number
-        const receiverAcct = (data?.receiver_bank_account_number || "")
-          .toString()
-          .trim();
+        // 2) DVA path: match on receiver_account_number
+        const receiverAcct = data?.metadata?.receiver_account_number;
+        console.log("Receiver acct:", receiverAcct);
 
-        // find user by stored userId
-        const userByDVA = await User.findOne({ _id: userId }).select("DVA_Number");
-        if (userByDVA.DVA_Number == receiverAcct) {
+        const email = data?.customer?.email;
+
+        // find user by stored email
+        const userByDVA = await User.findOne({ email }).select(
+          "DVA_Number"
+        );
+        if (userByDVA.DVA_Number === receiverAcct) {
           await User.findByIdAndUpdate(
-            userId,
+            userByDVA._id,
             { $inc: { balance: amountNgn } },
             { new: true }
           );
@@ -206,7 +225,8 @@ app.post("/login", async (req, res) => {
       token,
       user: {
         id: user._id,
-        name: user.name,
+        firstName: user.firstName,
+        lastName: user.lastName,
         email: user.email,
         phone: user.phone,
       },
@@ -261,7 +281,7 @@ app.post("/transfer-recipient", authMiddleware, async (req, res) => {
     // Create transfer recipient on Paystack
     const payload = {
       type: "nuban",
-      name: user.name, // <- use logged-in user's name
+      name: user.firstName, // <- use logged-in user's name
       bank_code: bankCode,
       account_number: accountNumber,
       currency,
@@ -308,12 +328,19 @@ app.post("/register", async (req, res) => {
         error: "Unsupported Media Type. Please use 'application/json'.",
       });
     }
-    const { name, email, phone, password } = req.body;
+    const { firstName, lastName, email, phone, password } = req.body;
     // Validate name
-    if (typeof name !== "string" || name.trim() === "") {
+    if (typeof firstName !== "string" || firstName.trim() === "") {
       return res.status(400).json({
         status: false,
-        error: "Invalid input. 'name' must be a non-empty string.",
+        error: "Invalid input. 'firstName' must be a non-empty string.",
+      });
+    }
+
+    if (typeof lastName !== "string" || lastName.trim() === "") {
+      return res.status(400).json({
+        status: false,
+        error: "Invalid input. 'lastName' must be a non-empty string.",
       });
     }
 
@@ -375,7 +402,8 @@ app.post("/register", async (req, res) => {
 
     // Create user
     const created = await User.create({
-      name: name.trim(),
+      firstName: firstName.trim(),
+      lastName: lastName.trim(),
       email: emailNormalized,
       phone: phoneClean,
       passwordHash,
@@ -482,6 +510,40 @@ app.post("/withdraw", authMiddleware, async (req, res) => {
   } catch (error) {
     console.error("Error initializing transaction:", error);
     res.status(500).json({ error: "Failed to initialize transaction" });
+  }
+});
+
+// Create Dedicated virtual account
+app.post("/create-dedicated-account", authMiddleware, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const user = await User.findById(userId);
+
+    if (user.DVA_Number) {
+      return res.status(409).json({
+        error: "Dedicated virtual account already exists for this user.",
+        dvaAccountNum: user.DVA_Number,
+      });
+    }
+
+    // Call Paystack API to create a dedicated virtual account
+    const response = await axios.post(
+      "https://api.paystack.co/dedicated_account/assign",
+      {
+        email: user.email,
+        first_name: user.firstName,
+        last_name: user.lastName,
+        phone: user.phone,
+        preferredBank: "test-bank",
+        country: "NG",
+      },
+      { headers: { Authorization: `Bearer ${SECRET_KEY}` } }
+    );
+
+    res.json(response.data);
+  } catch (error) {
+    console.error("Error creating dedicated account:", error);
+    res.status(500).json({ error: "Failed to create dedicated account" });
   }
 });
 

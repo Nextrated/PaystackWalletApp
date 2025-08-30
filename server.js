@@ -6,19 +6,18 @@ import axios from "axios";
 import mongoose from "mongoose";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import e from "express";
 dotenv.config();
 const app = express();
 app.use(cors());
 
 const SECRET_KEY = process.env.PAYSTACK_SECRET_KEY;
-const uri = process.env.URI;
+const MONGO_URI = `mongodb+srv://${encodeURIComponent(DB_USERNAME)}:${encodeURIComponent(DB_PASSWORD)}@${DB_HOST}/${DB_NAME}?retryWrites=true&w=majority&appName=${DB_NAME}`;
 
 // Create a MongoClient to connect to the server
 const connectToDb = async () => {
   try {
     console.log("Connecting to MongoDB...");
-    const conn = await mongoose.connect(uri, {
+    const conn = await mongoose.connect(MONGO_URI, {
       dbName: process.env.DB_NAME,
     });
     console.log("MongoDB connected:", conn.connection.host);

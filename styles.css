@@ -1,0 +1,112 @@
+:root {
+  --bg: #0f172a;
+  --panel: #111827;
+  --panel-2: #0b1220;
+  --text: #e5e7eb;
+  --muted: #9ca3af;
+  --brand: #22c55e;
+  --danger: #ef4444;
+  --warn: #f59e0b;
+  --border: #1f2937;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: linear-gradient(120deg, var(--panel-2), var(--bg));
+  color: var(--text);
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Helvetica Neue, Arial, Noto Sans;
+}
+.container { max-width: 1100px; margin: 0 auto; padding: 24px; }
+header {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 16px; margin-bottom: 16px;
+}
+.title { margin: 0; font-size: 1.5rem; }
+.actions { display: flex; gap: 8px; flex-wrap: wrap; }
+button {
+  appearance: none; border: 1px solid var(--border); background: #0b1220; color: var(--text);
+  padding: 10px 14px; border-radius: 10px; cursor: pointer;
+  transition: transform .05s, background .2s, border-color .2s;
+}
+button:hover { background: #0e1730; border-color: #243041; }
+button:active { transform: translateY(1px); }
+.btn.brand { background: #0f331d; border-color: #1f6a39; }
+.btn.brand:hover { background: #114224; }
+.btn.warn { background: #3a2a0b; border-color: #6b4a10; }
+.btn.warn:hover { background: #4b3511; }
+.btn.danger { background: #3b0b0b; border-color: #6b1010; }
+.btn.danger:hover { background: #4b1111; }
+.grid { display: grid; grid-template-columns: 1fr; gap: 16px; }
+@media (min-width: 900px) { .grid { grid-template-columns: 1fr 2fr; } }
+.card {
+  background: linear-gradient(180deg, var(--panel), #0c1322);
+  border: 1px solid var(--border); border-radius: 14px; padding: 18px;
+}
+.muted { color: var(--muted); }
+.balance { font-size: 2.2rem; font-weight: 700; letter-spacing: .5px; }
+.row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.small { font-size: .9rem; }
+.notice { margin-top: 8px; font-size: .9rem; color: var(--muted); }
+
+/* ---- Form Card Styles (used in fundwallet.html, addbank.html, withdraw.html) ---- */
+.form-card {
+  max-width: 400px;
+  margin: 40px auto;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 24px;
+}
+
+label {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 500;
+}
+
+input {
+  width: 100%;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: #0b1220;
+  color: var(--text);
+}
+
+input:focus {
+  outline: none;
+  border-color: var(--brand);
+}
+
+.mt-2 { margin-top: 12px; }
+
+.msg {
+  margin-top: 12px;
+  font-size: .9rem;
+}
+.msg.error { color: var(--danger); }
+.msg.success { color: var(--brand); }
+ .auth-card {
+      max-width: 400px;
+      margin: 60px auto;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+    }
+    .auth-card h1 {
+      margin-top: 0;
+      text-align: center;
+      font-size: 1.5rem;
+    }
+  
+    .link {
+      display: block;
+      margin-top: 16px;
+      text-align: center;
+      font-size: .9rem;
+      color: var(--brand);
+      cursor: pointer;
+      text-decoration: none;
+    }
+    .link:hover { text-decoration: underline; }

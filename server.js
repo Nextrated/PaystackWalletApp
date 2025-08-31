@@ -11,7 +11,11 @@ const app = express();
 app.use(cors());
 
 const SECRET_KEY = process.env.PAYSTACK_SECRET_KEY;
-const MONGO_URI = `mongodb+srv://${encodeURIComponent(process.env.DB_USERNAME)}:${encodeURIComponent(process.env.DB_PASSWORD)}@${process.env.DB_HOST}/${process.env.DB_NAME}?retryWrites=true&w=majority&appName=${process.env.DB_NAME}`;
+const MONGO_URI = `mongodb+srv://${encodeURIComponent(
+  process.env.DB_USERNAME
+)}:${encodeURIComponent(process.env.DB_PASSWORD)}@${process.env.DB_HOST}/${
+  process.env.DB_NAME
+}?retryWrites=true&w=majority&appName=${process.env.DB_NAME}`;
 
 // Create a MongoClient to connect to the server
 const connectToDb = async () => {
@@ -57,8 +61,26 @@ const userSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-const User = mongoose.model("User", userSchema);
+// // transactions
+// const TxSchema = new mongoose.Schema({
+//   userId: { type: mongoose.Types.ObjectId, ref: "User", index: true, required: true },
+//   direction: { type: String, enum: ["credit", "debit"], required: true },
+//   type: { type: String, enum: ["fund","transfer","withdraw","refund","fee"], required: true },
+//   status: { type: String, enum: ["pending","success","failed"], index: true, required: true },
+//   amount: { type: Number, required: true },     // NGN (units), not kobo
+//   currency: { type: String, default: "NGN" },
+//   psReference: { type: String, unique: true, sparse: true }, // for idempotency
+//   narration: String,
+//   meta: mongoose.Schema.Types.Mixed,
+// }, { timestamps: true });
 
+// TxSchema.index({ userId: 1, createdAt: -1 });
+// TxSchema.index({ psReference: 1 }, { unique: true, sparse: true });
+
+const User = mongoose.model("User", userSchema);
+// const Transaction = mongoose.model("Transaction", TxSchema);
+
+// Auth Middleware
 function authMiddleware(req, res, next) {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
@@ -80,7 +102,7 @@ app.get("/me", authMiddleware, async (req, res) => {
   res.json({ user });
 });
 
-// Use raw body for JUST this route (required for signature)
+// Webhooks
 app.post(
   "/webhooks/paystack",
   express.raw({ type: "application/json" }),
@@ -103,69 +125,78 @@ app.post(
       const payload = JSON.parse(req.body.toString("utf8"));
       const { event, data } = payload;
 
-      // 3) Handle events (do quick work, then ack)
+      // Handle events
       if (event === "dedicatedaccount.assign.success") {
-        console.log(
-          "🆕 dedicatedaccount.assign.success:",
-          JSON.stringify(data, null, 2)
-        );
+        res.sendStatus(200); // ack immediately
 
-        const userEmail = data?.customer?.email;
-        const user = await User.findOne({ email: userEmail });
-        if (!user) {
-          return res.status(404).json({ error: "User not found" });
-        }
-
-        // save dva to user
-        const dvaAccountNum = data?.dedicated_account?.account_number;
-        await User.findByIdAndUpdate(user._id, {
-          $set: { DVA_Number: dvaAccountNum },
-        });
+        // run async logic "fire and forget"
+        (async () => {
+          try {
+            const userEmail = data?.customer?.email;
+            const user = await User.findOne({ email: userEmail });
+            if (!user) {
+              console.warn("Webhook: user not found for", userEmail);
+              return;
+            }
+            const dvaAccountNum = data?.dedicated_account?.account_number;
+            await User.findByIdAndUpdate(user._id, {
+              $set: { DVA_Number: dvaAccountNum },
+            });
+          } catch (err) {
+            console.error("Webhook post-ack error:", err);
+          }
+        })();
       }
 
       if (event === "transfer.success") {
-        console.log("🆕 transfer.success:", JSON.stringify(data, null, 2));
+        console.log(" transfer.success:", JSON.stringify(data, null, 2));
+        // Acknowledge immediately
+        return res.sendStatus(200);
       }
 
       if (event === "charge.success") {
         console.log("💰 charge.success:", JSON.stringify(data, null, 2));
 
-        const userId = data?.metadata?.userId;
-        const amountNgn = (data?.amount ?? 0) / 100;
+        // Acknowledge immediately
+        res.sendStatus(200);
 
-        if (userId && Number.isFinite(amountNgn)) {
-          // fire-and-forget or await; if long-running, enqueue a job
-          await User.findByIdAndUpdate(
-            userId,
-            { $inc: { balance: amountNgn } },
-            { new: true }
-          );
-        }
+        // Run DB logic asynchronously
+        (async () => {
+          try {
+            const userId = data?.metadata?.userId;
+            const amountNgn = (data?.amount ?? 0) / 100;
 
-        // 2) DVA path: match on receiver_account_number
-        const receiverAcct = data?.metadata?.receiver_account_number;
-        console.log("Receiver acct:", receiverAcct);
+            if (userId && Number.isFinite(amountNgn)) {
+              // Increment balance
+              await User.findByIdAndUpdate(
+                userId,
+                { $inc: { balance: amountNgn } },
+                { new: true }
+              );
+            } else {
+              // DVA path: match on receiver_account_number
+              const receiverAcct = data?.metadata?.receiver_account_number;
+              console.log("Receiver acct:", receiverAcct);
+              const email = data?.customer?.email;
 
-        const email = data?.customer?.email;
-
-        // find user by stored email
-        const userByDVA = await User.findOne({ email }).select(
-          "DVA_Number"
-        );
-        if (userByDVA.DVA_Number === receiverAcct) {
-          await User.findByIdAndUpdate(
-            userByDVA._id,
-            { $inc: { balance: amountNgn } },
-            { new: true }
-          );
-        }
+              const userByDVA = await User.findOne({ email }).select(
+                "DVA_Number"
+              );
+              if (userByDVA && userByDVA.DVA_Number === receiverAcct) {
+                await User.findByIdAndUpdate(
+                  userByDVA._id,
+                  { $inc: { balance: amountNgn } },
+                  { new: true }
+                );
+              }
+            }
+          } catch (err) {
+            console.error("Error processing charge.success webhook:", err);
+          }
+        })();
       }
-
-      // 4) Acknowledge AFTER verification/queuing
-      return res.sendStatus(200);
     } catch (err) {
       console.error("Webhook error:", err);
-      // Paystack will retry on non-2xx; only send 500 if truly bad
       return res.sendStatus(500);
     }
   }
@@ -236,9 +267,34 @@ app.post("/login", async (req, res) => {
   }
 });
 
+// Logout User
+app.post("/logout", authMiddleware, async (req, res) => {
+  try {
+    // Invalidate the user's session
+    req.user = null;
+    res.json({ message: "Logout successful" });
+  } catch (error) {
+    console.error("Error logging out:", error);
+    res.status(500).json({ error: "Failed to log out" });
+  }
+});
+
+// Get User from Database
+app.get("/user", authMiddleware, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const user = await User.findById(userId);
+    res.json({ user: user });
+  } catch (error) {
+    console.error("Error fetching user:", error);
+    res.status(500).json({ error: "Failed to fetch user" });
+  }
+});
+
 // tiny validators
 const isDigits = (s) => typeof s === "string" && /^\d+$/.test(s);
 
+// Transfer Recipient
 app.post("/transfer-recipient", authMiddleware, async (req, res) => {
   try {
     let { bankCode, accountNumber, currency } = req.body;
@@ -280,7 +336,7 @@ app.post("/transfer-recipient", authMiddleware, async (req, res) => {
     // Create transfer recipient on Paystack
     const payload = {
       type: "nuban",
-      name: user.firstName, // <- use logged-in user's name
+      name: user.firstName + " " + user.lastName, // <- use logged-in user's name
       bank_code: bankCode,
       account_number: accountNumber,
       currency,
@@ -450,12 +506,13 @@ app.post("/register", async (req, res) => {
 
 app.post("/payment", authMiddleware, async (req, res) => {
   try {
-    const { amount, email } = req.body;
-    const userId = await User.findOne({ email }).select("_id");
+    const { amount } = req.body;
+
+    const userId = await User.findOne({ email: req.user.email }).select("_id");
     const response = await axios.post(
       "https://api.paystack.co/transaction/initialize",
       {
-        email,
+        email: req.user.email,
         amount: amount * 100,
         currency: "NGN",
         metadata: {
@@ -484,7 +541,10 @@ app.post("/withdraw", authMiddleware, async (req, res) => {
     }
 
     const recipient = user.paystackRecipientCode;
-    console.log(recipient);
+    if (!recipient) {
+      return res.status(400).json({ error: "No bank account linked. Please add a bank account first." });
+    }
+
     const balance = user.balance || 0;
 
     // Check if user has sufficient balance
@@ -498,34 +558,45 @@ app.post("/withdraw", authMiddleware, async (req, res) => {
       {
         source: "balance",
         amount: amount * 100,
-        recipient: recipient,
+        recipient,
         reference: `withdrawal_${userId}_${Date.now()}`,
         reason: "User withdrawal",
       },
       { headers: { Authorization: `Bearer ${SECRET_KEY}` } }
     );
 
+    // If Paystack accepted the request, reduce user balance
+    if (response.data && response.data.status) {
+      await User.findByIdAndUpdate(
+        userId,
+        { $inc: { balance: -amount } }, // subtract amount from balance
+        { new: true }
+      );
+    }
+
     res.json(response.data);
   } catch (error) {
-    console.error("Error initializing transaction:", error);
-    res.status(500).json({ error: "Failed to initialize transaction" });
+    console.error("Error initializing withdrawal:", error?.response?.data || error.message);
+    res.status(500).json({ error: "Failed to initialize withdrawal" });
   }
 });
 
-// Create Dedicated virtual account
+// Create dedicated virtual account
 app.post("/create-dedicated-account", authMiddleware, async (req, res) => {
   try {
-    const userId = req.user.id;
-    const user = await User.findById(userId);
+    const user = await User.findById(req.user.id);
 
     if (user.DVA_Number) {
-      return res.status(409).json({
-        error: "Dedicated virtual account already exists for this user.",
-        dvaAccountNum: user.DVA_Number,
-      });
+      return res
+        .status(409)
+        .json({
+          error: "Dedicated virtual account already exists for this user.",
+          dvaAccountNum: user.DVA_Number,
+        });
     }
 
-    // Call Paystack API to create a dedicated virtual account
+    const preferredBank = req.body?.preferredBank || "test-bank"; // fallback
+
     const response = await axios.post(
       "https://api.paystack.co/dedicated_account/assign",
       {
@@ -533,7 +604,7 @@ app.post("/create-dedicated-account", authMiddleware, async (req, res) => {
         first_name: user.firstName,
         last_name: user.lastName,
         phone: user.phone,
-        preferredBank: "test-bank",
+        preferredBank,
         country: "NG",
       },
       { headers: { Authorization: `Bearer ${SECRET_KEY}` } }
@@ -541,8 +612,35 @@ app.post("/create-dedicated-account", authMiddleware, async (req, res) => {
 
     res.json(response.data);
   } catch (error) {
-    console.error("Error creating dedicated account:", error);
+    console.error(
+      "Error creating dedicated account:",
+      error?.response?.data || error
+    );
     res.status(500).json({ error: "Failed to create dedicated account" });
+  }
+});
+
+// fetch bank providers
+app.get("/bank-providers", authMiddleware, async (req, res) => {
+  try {
+    const response = await axios.get(
+      "https://api.paystack.co/dedicated_account/available_providers",
+      {
+        headers: { Authorization: `Bearer ${SECRET_KEY}` },
+      }
+    );
+
+    const keyMode = SECRET_KEY.startsWith("sk_live") ? "live" : "test";
+
+    res.json({
+      status: true,
+      message: "Dedicated account providers retrieved",
+      data: response.data.data,
+      keyMode,
+    });
+  } catch (err) {
+    console.error("Error fetching bank providers:", err);
+    res.status(500).json({ error: "Failed to fetch bank providers" });
   }
 });
 

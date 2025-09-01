@@ -20,7 +20,7 @@
         <button class="btn brand mt-2" type="submit">Login</button>
       </form>
       <div id="message" class="msg"></div>
-      <a href="signup.html" class="link">Don’t have an account? Sign up</a>
+      <a href="/signup" class="link">Don’t have an account? Sign up</a>
     </section>
   </div>
 
@@ -48,7 +48,7 @@
           localStorage.setItem("token", result.token);
           msgEl.textContent = "Login successful! Redirecting…";
           msgEl.className = "msg success";
-          setTimeout(() => (window.location.href = "dashboard.html"), 800);
+          setTimeout(() => (window.location.href = "/dashboard"), 800);
         } else {
           msgEl.textContent = result.error || "Login failed.";
           msgEl.className = "msg error";

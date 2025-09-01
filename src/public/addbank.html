@@ -11,7 +11,7 @@
     <header>
       <h1 class="title">Add Bank Account</h1>
       <div class="actions">
-        <button class="btn" onclick="window.location.href='dashboard.html'">← Back</button>
+        <button class="btn" onclick="window.location.href='/dashboard'">← Back</button>
       </div>
     </header>
 
@@ -42,7 +42,7 @@
 
   <script>
     const token = localStorage.getItem("token");
-    if (!token) window.location.href = "login.html";
+    if (!token) window.location.href = "/login";
 
     const msgEl = document.getElementById("message");
     const form = document.getElementById("add-bank-form");
@@ -127,7 +127,7 @@
 
         msgEl.textContent = "Bank account saved successfully!";
         msgEl.className = "msg success";
-        setTimeout(() => (window.location.href = "dashboard.html"), 1200);
+        setTimeout(() => (window.location.href = "/dashboard"), 1200);
       } catch (err) {
         msgEl.textContent = err.message;
         msgEl.className = "msg error";

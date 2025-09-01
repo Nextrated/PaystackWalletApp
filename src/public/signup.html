@@ -89,7 +89,7 @@
         // Save token and go to dashboard
         localStorage.setItem("token", loginData.token);
         showMsg("Account created! Redirecting to dashboard…", "success");
-        setTimeout(() => (window.location.href = "dashboard.html"), 900);
+        setTimeout(() => (window.location.href = "/dashboard"), 900);
 
       } catch (err) {
         showMsg(err.message || "Network error.");

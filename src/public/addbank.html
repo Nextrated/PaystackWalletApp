@@ -40,7 +40,9 @@
     </section>
   </div>
 
-  <script>
+  <script type="module">
+    import { API_BASE_URL } from "./config.js";
+
     const token = localStorage.getItem("token");
     if (!token) window.location.href = "/login";
 
@@ -55,7 +57,7 @@
     // Load banks (uses /banks which proxies Paystack)
     async function loadBanks() {
       try {
-        const res = await fetch("http://localhost:80/banks", {
+        const res = await fetch(`${API_BASE_URL}/banks`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         const payload = await res.json();
@@ -109,7 +111,7 @@
       submitBtn.disabled = true;
 
       try {
-        const res = await fetch("http://localhost:80/transfer-recipient", {
+        const res = await fetch(`${API_BASE_URL}/transfer-recipient`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",

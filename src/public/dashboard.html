@@ -42,7 +42,9 @@
       </div>
     </div>
 
-    <script>
+    <script type="module">
+      import { API_BASE_URL } from "./config.js";
+
       const token = localStorage.getItem("token");
       const authHeaders = token ? { Authorization: `Bearer ${token}` } : {};
 
@@ -58,10 +60,10 @@
 
       async function loadMe() {
         if (!token) {
-          window.location.href = "login.html";
+          window.location.href = "/login";
           return;
         }
-        const res = await fetch("http://localhost:80/me", {
+        const res = await fetch(`${API_BASE_URL}/me`, {
           headers: { ...authHeaders },
         });
         if (res.status === 401) {
@@ -123,7 +125,7 @@
 
         try {
           // 1) Ask backend which key we’re on + get providers
-          const provRes = await fetch("http://localhost:80/bank-providers", {
+          const provRes = await fetch(`${API_BASE_URL}/bank-providers`, {
             headers: { Authorization: `Bearer ${token}` },
           });
           const provJson = await provRes.json();
@@ -146,7 +148,7 @@
 
           // 3) Request DVA creation
           const dvaRes = await fetch(
-            "http://localhost:80/create-dedicated-account",
+            `${API_BASE_URL}/create-dedicated-account`,
             {
               method: "POST",
               headers: {
@@ -202,7 +204,7 @@
         .addEventListener("click", async () => {
           try {
             if (token) {
-              await fetch("http://localhost:80/logout", {
+              await fetch(`${API_BASE_URL}/logout`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json", ...authHeaders },
               });

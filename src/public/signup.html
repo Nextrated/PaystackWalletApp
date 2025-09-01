@@ -39,7 +39,9 @@
     </section>
   </div>
 
-  <script>
+  <script type="module">
+    import { API_BASE_URL } from "./config.js";
+
     const form = document.getElementById("signup-form");
     const msgEl = document.getElementById("message");
     const submitBtn = document.getElementById("submitBtn");
@@ -63,7 +65,7 @@
 
       try {
         // 1. Register
-        const res = await fetch("http://localhost:80/register", {
+        const res = await fetch(`${API_BASE_URL}/register`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
@@ -75,7 +77,7 @@
         }
 
         // 2. Immediately log in
-        const loginRes = await fetch("http://localhost:80/login", {
+        const loginRes = await fetch(`${API_BASE_URL}/login`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email: payload.email, password: payload.password }),

@@ -24,7 +24,9 @@
     </section>
   </div>
 
-  <script>
+  <script type="module">
+    import { API_BASE_URL } from "./config.js";
+
     const form = document.getElementById("login-form");
     const msgEl = document.getElementById("message");
 
@@ -37,7 +39,7 @@
       const data = Object.fromEntries(formData);
 
       try {
-        const response = await fetch("http://localhost:80/login", {
+        const response = await fetch(`${API_BASE_URL}/login`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(data),

@@ -25,7 +25,9 @@
     </section>
   </div>
 
-  <script>
+  <script type="module">
+    import { API_BASE_URL } from "./config.js";
+
     const token = localStorage.getItem("token");
     if (!token) window.location.href = "/login";
 
@@ -45,7 +47,7 @@
       }
 
       try {
-        const res = await fetch("http://localhost:80/withdraw", {
+        const res = await fetch(`${API_BASE_URL}/withdraw`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",

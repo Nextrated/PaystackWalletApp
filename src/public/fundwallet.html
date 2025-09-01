@@ -25,9 +25,11 @@
     </section>
   </div>
 
-  <script>
+  <script type="module">
+    import { API_BASE_URL } from "./config.js";
+
     const token = localStorage.getItem("token");
-    if (!token) window.location.href = "login.html";
+    if (!token) window.location.href = "/login";
 
     const msgEl = document.getElementById("message");
     const form = document.getElementById("fund-form");
@@ -44,7 +46,7 @@
       }
 
       try {
-        const res = await fetch("http://localhost:80/payment", {
+        const res = await fetch(`${API_BASE_URL}/payment`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",

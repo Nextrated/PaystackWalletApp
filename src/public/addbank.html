@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Add Bank Account</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1 class="title">Add Bank Account</h1>
+      <div class="actions">
+        <button class="btn" onclick="window.location.href='/dashboard'">← Back</button>
+      </div>
+    </header>
+
+    <section class="form-card">
+      <form id="add-bank-form" novalidate>
+        <label for="accountNumber">Account Number (10 digits)</label>
+        <input
+          type="text"
+          id="accountNumber"
+          name="accountNumber"
+          maxlength="10"
+          inputmode="numeric"
+          pattern="\\d{10}"
+          placeholder="0123456789"
+          required
+        />
+
+        <label class="mt-2" for="bankSelect">Select Bank</label>
+        <select id="bankSelect" name="bankSelect" required>
+          <option value="">Loading banks…</option>
+        </select>
+
+        <button class="btn brand mt-2" type="submit" id="submitBtn">Save Bank</button>
+      </form>
+      <div id="message" class="msg"></div>
+    </section>
+  </div>
+
+  <script type="module">
+    import { API_BASE_URL } from "./config.js";
+
+    const token = localStorage.getItem("token");
+    if (!token) window.location.href = "/login";
+
+    const msgEl = document.getElementById("message");
+    const form = document.getElementById("add-bank-form");
+    const bankSelect = document.getElementById("bankSelect");
+    const submitBtn = document.getElementById("submitBtn");
+
+    // Helpers
+    const isTenDigits = (v) => /^\d{10}$/.test(v || "");
+
+    // Load banks (uses /banks which proxies Paystack)
+    async function loadBanks() {
+      try {
+        const res = await fetch(`${API_BASE_URL}/banks`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const payload = await res.json();
+        if (!res.ok) throw new Error(payload?.error || "Failed to fetch banks");
+
+        const list = payload?.data || []; // Paystack: { status, message, data: [...] }
+        bankSelect.innerHTML = '<option value="">Select a bank</option>';
+
+        for (const b of list) {
+          // Expecting each item like: { name: "Access Bank", code: "044", ... }
+          if (!b?.name || !b?.code) continue;
+          const opt = document.createElement("option");
+          opt.value = String(b.code);   // store code as string
+          opt.textContent = b.name;     // show name
+          bankSelect.appendChild(opt);
+        }
+      } catch (err) {
+        bankSelect.innerHTML = '<option value="">Failed to load banks</option>';
+        msgEl.textContent = err.message;
+        msgEl.className = "msg error";
+      }
+    }
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      msgEl.textContent = "";
+      msgEl.className = "msg";
+
+      // Collect + normalize
+      const accountNumber = String(document.getElementById("accountNumber").value || "").trim();
+      const bankCode = String(bankSelect.value || "").trim();
+
+      // Client-side validation to match server expectations
+      if (!isTenDigits(accountNumber)) {
+        msgEl.textContent = "Account number must be exactly 10 digits.";
+        msgEl.className = "msg error";
+        return;
+      }
+      if (!bankCode) {
+        msgEl.textContent = "Please select a bank.";
+        msgEl.className = "msg error";
+        return;
+      }
+
+      const payload = {
+        bankCode: bankCode,               // string
+        accountNumber: accountNumber,     // string
+        currency: "NGN"                   // required by server
+      };
+
+      submitBtn.disabled = true;
+
+      try {
+        const res = await fetch(`${API_BASE_URL}/transfer-recipient`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(payload),
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+          // Show specific server message if available
+          const detail = data?.detail?.message || data?.detail || data?.error || "Failed to save bank";
+          throw new Error(detail);
+        }
+
+        msgEl.textContent = "Bank account saved successfully!";
+        msgEl.className = "msg success";
+        setTimeout(() => (window.location.href = "/dashboard"), 1200);
+      } catch (err) {
+        msgEl.textContent = err.message;
+        msgEl.className = "msg error";
+      } finally {
+        submitBtn.disabled = false;
+      }
+    });
+
+    loadBanks();
+  </script>
+</body>
+</html>

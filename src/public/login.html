@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Login</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="container">
+    <section class="auth-card">
+      <h1>Login to Your Account</h1>
+      <form id="login-form" novalidate>
+        <label for="email">Email</label>
+        <input type="email" id="email" name="email" placeholder="you@example.com" required />
+
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password" placeholder="••••••••" required />
+
+        <button class="btn brand mt-2" type="submit">Login</button>
+      </form>
+      <div id="message" class="msg"></div>
+      <a href="/signup" class="link">Don’t have an account? Sign up</a>
+    </section>
+  </div>
+
+  <script type="module">
+    import { API_BASE_URL } from "./config.js";
+
+    const form = document.getElementById("login-form");
+    const msgEl = document.getElementById("message");
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      msgEl.textContent = "";
+      msgEl.className = "msg";
+
+      const formData = new FormData(form);
+      const data = Object.fromEntries(formData);
+
+      try {
+        const response = await fetch(`${API_BASE_URL}/login`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data),
+        });
+
+        const result = await response.json();
+        if (response.ok) {
+          localStorage.setItem("token", result.token);
+          msgEl.textContent = "Login successful! Redirecting…";
+          msgEl.className = "msg success";
+          setTimeout(() => (window.location.href = "/dashboard"), 800);
+        } else {
+          msgEl.textContent = result.error || "Login failed.";
+          msgEl.className = "msg error";
+        }
+      } catch (err) {
+        msgEl.textContent = err.message;
+        msgEl.className = "msg error";
+      }
+    });
+  </script>
+</body>
+</html>

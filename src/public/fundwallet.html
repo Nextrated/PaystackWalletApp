@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Fund Wallet</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1 class="title">Fund Wallet</h1>
+      <div class="actions">
+        <button class="btn" onclick="window.location.href='/dashboard'">← Back</button>
+      </div>
+    </header>
+
+    <section class="form-card">
+      <form id="fund-form">
+        <label for="amount">Enter Amount (NGN)</label>
+        <input type="number" id="amount" name="amount" min="100" required />
+        <button class="btn brand mt-2" type="submit">Fund Wallet</button>
+      </form>
+      <div id="message" class="msg"></div>
+    </section>
+  </div>
+
+  <script type="module">
+    import { API_BASE_URL } from "./config.js";
+
+    const token = localStorage.getItem("token");
+    if (!token) window.location.href = "/login";
+
+    const msgEl = document.getElementById("message");
+    const form = document.getElementById("fund-form");
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      msgEl.textContent = "";
+      const amount = parseFloat(document.getElementById("amount").value);
+
+      if (!amount || amount <= 0) {
+        msgEl.textContent = "Please enter a valid amount.";
+        msgEl.className = "msg error";
+        return;
+      }
+
+      try {
+        const res = await fetch(`${API_BASE_URL}/payment`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ amount }),
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.error || "Failed to initialize payment");
+        }
+
+        msgEl.textContent = "Payment initialized! Redirecting…";
+        msgEl.className = "msg success";
+
+        if (data.data && data.data.authorization_url) {
+          window.location.href = data.data.authorization_url;
+        } else {
+          setTimeout(() => window.location.href = "/dashboard", 1500);
+        }
+
+      } catch (err) {
+        msgEl.textContent = err.message;
+        msgEl.className = "msg error";
+      }
+    });
+  </script>
+</body>
+</html>

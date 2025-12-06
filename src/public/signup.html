@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Sign Up</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1 class="title">Create an Account</h1>
+      <div class="actions">
+        <button class="btn" onclick="window.location.href='login.html'">← Back to Login</button>
+      </div>
+    </header>
+
+    <section class="form-card">
+      <form id="signup-form" novalidate>
+        <label for="firstName">First Name</label>
+        <input id="firstName" name="firstName" type="text" placeholder="Ada" required />
+
+        <label class="mt-2" for="lastName">Last Name</label>
+        <input id="lastName" name="lastName" type="text" placeholder="Lovelace" required />
+
+        <label class="mt-2" for="email">Email</label>
+        <input id="email" name="email" type="email" placeholder="you@example.com" required />
+
+        <label class="mt-2" for="phone">Phone (digits only)</label>
+        <input id="phone" name="phone" type="tel" inputmode="numeric" pattern="\\d+" placeholder="08012345678" required />
+
+        <label class="mt-2" for="password">Password (min 8 chars)</label>
+        <input id="password" name="password" type="password" minlength="8" placeholder="••••••••" required />
+
+        <button class="btn brand mt-2" type="submit" id="submitBtn">Sign Up</button>
+      </form>
+      <div id="message" class="msg"></div>
+      <a href="login.html" class="link">Already have an account? Log in</a>
+    </section>
+  </div>
+
+  <script type="module">
+    import { API_BASE_URL } from "./config.js";
+
+    const form = document.getElementById("signup-form");
+    const msgEl = document.getElementById("message");
+    const submitBtn = document.getElementById("submitBtn");
+
+    function showMsg(text, kind = "error") {
+      msgEl.textContent = text;
+      msgEl.className = "msg " + kind;
+    }
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      msgEl.textContent = "";
+      msgEl.className = "msg";
+
+      const formData = new FormData(form);
+      const payload = Object.fromEntries(formData);
+
+      payload.phone = (payload.phone || "").replace(/\D/g, "");
+
+      submitBtn.disabled = true;
+
+      try {
+        // 1. Register
+        const res = await fetch(`${API_BASE_URL}/register`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const result = await res.json();
+
+        if (!res.ok) {
+          return showMsg(result?.error || "Sign up failed.");
+        }
+
+        // 2. Immediately log in
+        const loginRes = await fetch(`${API_BASE_URL}/login`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: payload.email, password: payload.password }),
+        });
+        const loginData = await loginRes.json();
+
+        if (!loginRes.ok) {
+          return showMsg(loginData?.error || "Signup ok, but login failed.");
+        }
+
+        // Save token and go to dashboard
+        localStorage.setItem("token", loginData.token);
+        showMsg("Account created! Redirecting to dashboard…", "success");
+        setTimeout(() => (window.location.href = "/dashboard"), 900);
+
+      } catch (err) {
+        showMsg(err.message || "Network error.");
+      } finally {
+        submitBtn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>

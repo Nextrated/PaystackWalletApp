@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Wallet Dashboard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <h1 class="title">Wallet Dashboard</h1>
+        <div class="actions">
+          <button class="btn brand" id="fund-wallet-button">Fund Wallet</button>
+          <button class="btn" id="add-bank-button">Add Bank Account</button>
+          <button class="btn warn" id="withdraw-funds-button">
+            Withdraw Funds
+          </button>
+          <button class="btn" id="generate-dva-button">Generate DVA</button>
+          <button class="btn danger" id="logout-button">Logout</button>
+        </div>
+      </header>
+
+      <div class="grid">
+        <section class="card">
+          <div class="row">
+            <div>
+              <div class="muted small">Current Balance</div>
+              <div class="balance"><span id="user-balance">0</span> NGN</div>
+            </div>
+            <div>
+              <div class="muted small">Account</div>
+              <div id="account-label" class="small">—</div>
+            </div>
+            <div>
+              <div class="muted small">Payout Bank</div>
+              <div id="bank-status" class="small">—</div>
+            </div>
+          </div>
+          <div class="notice" id="dva-notice" aria-live="polite"></div>
+        </section>
+      </div>
+    </div>
+
+    <script type="module">
+      import { API_BASE_URL } from "./config.js";
+
+      const token = localStorage.getItem("token");
+      const authHeaders = token ? { Authorization: `Bearer ${token}` } : {};
+
+      function naira(n) {
+        try {
+          return new Intl.NumberFormat("en-NG", {
+            maximumFractionDigits: 2,
+          }).format(n || 0);
+        } catch {
+          return String(n || 0);
+        }
+      }
+
+      async function loadMe() {
+        if (!token) {
+          window.location.href = "/login";
+          return;
+        }
+        const res = await fetch(`${API_BASE_URL}/me`, {
+          headers: { ...authHeaders },
+        });
+        if (res.status === 401) {
+          localStorage.removeItem("token");
+          window.location.href = "/login";
+          return;
+        }
+        if (!res.ok) throw new Error("Failed to fetch /me");
+        const { user } = await res.json();
+
+        // Balance
+        document.getElementById("user-balance").textContent = naira(
+          user?.balance ?? 0
+        );
+
+        // DVA label + notice
+        const dva = user?.DVA_Number || user?.dvaAccountNumber;
+        document.getElementById("account-label").textContent = dva
+          ? `DVA • ${dva}`
+          : "No DVA assigned";
+        document.getElementById("dva-notice").textContent = dva
+          ? "Fund your wallet by transferring to your Dedicated Virtual Account."
+          : "No DVA yet. Generate a DVA to fund your wallet.";
+
+        // Bank status (based on paystackRecipientCode)
+        const hasBank = !!user?.paystackRecipientCode;
+        const bankStatusEl = document.getElementById("bank-status");
+        if (bankStatusEl) {
+          bankStatusEl.textContent = hasBank ? "Added" : "Not added";
+        }
+
+        // UX: disable Withdraw if bank not added; tweak Add Bank label
+        const withdrawBtn = document.getElementById("withdraw-funds-button");
+        if (withdrawBtn) {
+          withdrawBtn.disabled = !hasBank;
+          withdrawBtn.title = hasBank
+            ? ""
+            : "Add a bank account to enable withdrawals.";
+        }
+        const addBankBtn = document.getElementById("add-bank-button");
+        if (addBankBtn) {
+          addBankBtn.textContent = hasBank
+            ? "Update Bank Account"
+            : "Add Bank Account";
+        }
+      }
+
+      // Generate DVA with random provider from /bank-providers
+
+      const genBtn = document.getElementById("generate-dva-button");
+
+      genBtn.addEventListener("click", async () => {
+        if (!token) {
+          window.location.href = "/login";
+          return;
+        }
+
+        genBtn.disabled = true;
+
+        try {
+          // 1) Ask backend which key we’re on + get providers
+          const provRes = await fetch(`${API_BASE_URL}/bank-providers`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          const provJson = await provRes.json();
+          if (!provRes.ok)
+            throw new Error(provJson?.error || "Failed to fetch providers");
+
+          const providers = Array.isArray(provJson?.data) ? provJson.data : [];
+          if (!providers.length) throw new Error("No bank providers available");
+
+          // 2) Decide provider slug based on mode
+          let preferredBank;
+          if (provJson?.keyMode === "live") {
+            // in production → pick from providers
+            const idx = Math.floor(Math.random() * providers.length);
+            preferredBank = providers[idx].provider_slug;
+          } else {
+            // default to test-bank in test mode
+            preferredBank = "test-bank";
+          }
+
+          // 3) Request DVA creation
+          const dvaRes = await fetch(
+            `${API_BASE_URL}/create-dedicated-account`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+              },
+              body: JSON.stringify({ preferredBank }),
+            }
+          );
+
+          if (dvaRes.status === 409) {
+            const conflict = await dvaRes.json().catch(() => ({}));
+            alert(
+              `DVA already exists${
+                conflict?.dvaAccountNum ? `: ${conflict.dvaAccountNum}` : ""
+              }.`
+            );
+            await loadMe();
+            return;
+          }
+
+          const dvaJson = await dvaRes.json().catch(() => ({}));
+          if (!dvaRes.ok)
+            throw new Error(dvaJson?.error || "Failed to create DVA");
+
+          alert(dvaJson?.message || "Assign dedicated account in progress.");
+          await loadMe();
+        } catch (err) {
+          console.error("Generate DVA error:", err);
+          alert(err.message || "Error generating DVA");
+        } finally {
+          genBtn.disabled = false;
+        }
+      });
+
+      document
+        .getElementById("fund-wallet-button")
+        .addEventListener("click", () => {
+          window.location.href = "/fundwallet";
+        });
+      document
+        .getElementById("add-bank-button")
+        .addEventListener("click", () => {
+          window.location.href = "/addbank";
+        });
+      document
+        .getElementById("withdraw-funds-button")
+        .addEventListener("click", () => {
+          window.location.href = "/withdraw";
+        });
+      document
+        .getElementById("logout-button")
+        .addEventListener("click", async () => {
+          try {
+            if (token) {
+              await fetch(`${API_BASE_URL}/logout`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", ...authHeaders },
+              });
+            }
+          } finally {
+            localStorage.removeItem("token");
+            window.location.href = "/login";
+          }
+        });
+
+      loadMe().catch((err) => {
+        console.error(err);
+        localStorage.removeItem("token");
+        window.location.href = "/login";
+      });
+    </script>
+  </body>
+</html>

@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 
+// Define the User schema
 const userSchema = new mongoose.Schema(
   {
     firstName: { type: String, required: true, trim: true },

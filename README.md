@@ -52,6 +52,9 @@ PORT=your_preferred_port
 4. **Run the Application:**
 
    npm run dev
+
+5. **Live Demo**
+https://paystackwalletapp.onrender.com/ 
    
 
 

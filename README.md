@@ -1,44 +1,57 @@
-# paystackwalletapp@1.0.0
- [![npm version](https://badge.fury.io/js/paystackwalletapp.svg)](https://npmjs.org/package/paystackwalletapp)  [![minzipped size](https://img.shields.io/bundlephobia/minzip/paystackwalletapp.svg)](https://bundlephobia.com/result?p=paystackwalletapp)  [![build status](https://img.shields.io/travis/Nextrated/PaystackWalletApp/master.svg)](https://travis-ci.org/Nextrated/PaystackWalletApp#master)  [![coverage status](https://coveralls.io/repos/Nextrated/PaystackWalletApp/badge.svg)](https://coveralls.io/github/Nextrated/PaystackWalletApp)  [![dependency status](https://david-dm.org/Nextrated/PaystackWalletApp.svg?theme=shields.io)](https://david-dm.org/Nextrated/PaystackWalletApp)  [![devDependency status](https://david-dm.org/Nextrated/PaystackWalletApp/dev-status.svg)](https://david-dm.org/Nextrated/PaystackWalletApp#info=devDependencies)  [![Gitter](https://badges.gitter.im/Nextrated/PaystackWalletApp.svg)](https://gitter.im/Nextrated/PaystackWalletApp) 
+
+## Overview
+
+This application demonstrates how to turn Paystack's Dedicated Virtual Accounts (DVAs) into a working wallet system. While DVAs are typically just pass-through accounts directing funds to a merchant’s main account, this implementation shows how to layer a wallet feature on top using Node.js, Express, and MongoDB.
+
+## Features
+
+* **Virtual Account Integration:** Automatically credit a user’s internal wallet balance when funds are received via their assigned DVA.
+* **Multiple Funding Methods:** Support for standard card and bank transfer payments in addition to DVA funding.
+* **Simple Frontend:** A straightforward HTML/CSS interface for users to view and manage their wallet.
+* **JWT Authentication:** Uses JSON Web Tokens for secure user sessions.
+
+## Tech Stack
+
+* **Backend:** Node.js with Express
+* **Database:** MongoDB
+* **Frontend:** HTML and CSS
+* **Payment Integration:** Paystack API
+
+## Environment Variables
+
+To run this application, you’ll need to set up a `.env` file with the following variables:
+
+PAYSTACK_SECRET_KEY=your_paystack_secret_key
+DB_USERNAME=your_mongodb_username
+DB_PASSWORD=your_mongodb_password
+DB_HOST=your_mongodb_host
+DB_NAME=your_mongodb_database_name
+JWT_SECRET=your_jwt_secret
+JWT_EXPIRES_IN=expiration_time_for_tokens
+PORT=your_preferred_port
 
 
+## Setup Instructions
+
+1. **Clone the Repository:**
+
+   git clone https://github.com/Nextrated/PaystackWalletApp.git
+   ```
+
+2. **Install Dependencies:**
+
+   cd your-repo
+   npm install
+   
+
+3. **Set Up Environment Variables:**
+   Create a `.env` file in the root directory and fill in your credentials as listed above.
+
+   Then, navigate to src/public/config and update the API_BASE_URL to your local or deployed URL (e.g., https://localhost:3000 or your production URL).
+
+4. **Run the Application:**
+
+   npm run dev
+   
 
 
-## Installation
-Download node at [nodejs.org](http://nodejs.org) and install it, if you haven't already.
-
-```sh
-npm install paystackwalletapp --save
-```
-
-This package is provided in these module formats:
-
-- CommonJS
-
-
-
-
-## Dependencies
-
-- [axios](https://github.com/axios/axios): Promise based HTTP client for the browser and node.js
-- [bcrypt](https://github.com/kelektiv/node.bcrypt.js): A bcrypt library for NodeJS.
-- [cors](): 
-- [crypto](https://github.com/npm/deprecate-holder): 
-- [dotenv](https://github.com/motdotla/dotenv): Loads environment variables from .env file
-- [express](): 
-- [jsonwebtoken](https://github.com/auth0/node-jsonwebtoken): JSON Web Token implementation (symmetric and asymmetric)
-- [mongodb](https://github.com/mongodb/node-mongodb-native): The official MongoDB driver for Node.js
-- [mongoose](https://github.com/Automattic/mongoose): Mongoose MongoDB ODM
-- [nodemon](https://github.com/remy/nodemon): Simple monitor script for use during development of a Node.js app.
-- [swagger-jsdoc](https://github.com/Surnet/swagger-jsdoc): Generates swagger doc based on JSDoc
-- [swagger-ui](): 
-- [swagger-ui-express](https://github.com/scottie1984/swagger-ui-express): Swagger UI Express
-
-
-## Dev Dependencies
-
-- [open](): 
-
-
-## License
-[ISC]()

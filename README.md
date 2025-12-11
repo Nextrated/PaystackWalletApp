@@ -64,6 +64,6 @@ To fund live dva, transfer money to the account number from your mobile banking 
 7. **Webhooks**
 To ensure all events are received, ensure you set your webhookurl on your paystack dashboard: https://yourwebhookurl/webhooks/paystack   
 
-replace <yourwebhookurl> with the actual url
+replace **yourwebhookurl** with the actual url
 
 

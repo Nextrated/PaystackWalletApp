@@ -49,12 +49,21 @@ PORT=your_preferred_port
 
    Then, navigate to src/public/config and update the API_BASE_URL to your local or deployed URL (e.g., https://localhost:3000 or your production URL).
 
+
 4. **Run the Application:**
 
    npm run dev
 
 5. **Live Demo**
 https://paystackwalletapp.onrender.com/ 
-   
+
+6. **Fund DVA**
+To fund test dva, transfer money to the account number generated here: https://demobank.paystackintegrations.com/
+To fund live dva, transfer money to the account number from your mobile banking app.
+
+7. **Webhooks**
+To ensure all events are received, ensure you set your webhookurl on your paystack dashboard: https://yourwebhookurl/webhooks/paystack   
+
+replace <yourwebhookurl> with the actual url
 
 

@@ -26,7 +26,9 @@ export const paystackWebhook = async (req, res) => {
             return;
           }
           const dvaAccountNum = data?.dedicated_account?.account_number;
-          await User.findByIdAndUpdate(user._id, { $set: { DVA_Number: dvaAccountNum } });
+          const dvaAccountName = data?.dedicated_account?.account_name;
+          const dvaBankName = data?.dedicated_account?.bank?.name;
+         await User.findByIdAndUpdate(user._id,{$set: {DVA_Number:dvaAccountNum,DVA_bankName:dvaBankName,DVA_accountName: dvaAccountName}},{ new: true });
         } catch (err) {
           console.error("Webhook post-ack error:", err);
         }

@@ -24,6 +24,8 @@ const userSchema = new mongoose.Schema(
     balance: { type: Number, required: true, default: 0 },
     paystackRecipientCode: { type: String, default: null },
     DVA_Number: { type: String, default: null },
+    DVA_bankName: { type: String, default: null },
+    DVA_accountName: { type: String, default: null }
   },
   { timestamps: true }
 );

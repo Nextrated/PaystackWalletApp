@@ -38,7 +38,20 @@ export const paystackWebhook = async (req, res) => {
 
     if (event === "transfer.success") {
       console.log(" transfer.success:", JSON.stringify(data, null, 2));
-      return res.sendStatus(200);
+      res.sendStatus(200);
+      (async () => {
+        try {
+          const userId = data?.metadata?.userId;
+          const amount = (data?.amount ?? 0) / 100; 
+          if (userId) {
+           await User.findByIdAndUpdate(userId, { $inc: { balance: -amount } }, { new: true }); 
+          }
+
+        } catch (err) {
+          console.error("Error processing transfer.success webhook:", err);
+        }
+    })();
+      return;
     }
 
     if (event === "charge.success") {

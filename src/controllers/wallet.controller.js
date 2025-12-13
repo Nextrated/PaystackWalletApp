@@ -37,7 +37,7 @@ export const withdraw = async (req, res) => {
     reason: "User withdrawal",
   });
 
-  if (response.data && response.data.status) {
+  if (response.data && response.data.status === "success") {
     await User.findByIdAndUpdate(userId, { $inc: { balance: -amount } }, { new: true });
   }
 
@@ -81,5 +81,11 @@ export const createDedicatedAccount = async (req, res) => {
     country: "NG",
   });
 
+  res.json(response.data);
+};
+
+export const verifyCardBin = async (req, res) => {
+  const { bin } = req.params;
+  const response = await paystack.get(`/decision/bin/${bin}`);
   res.json(response.data);
 };

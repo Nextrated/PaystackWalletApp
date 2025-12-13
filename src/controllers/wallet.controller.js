@@ -37,7 +37,7 @@ export const withdraw = async (req, res) => {
     reason: "User withdrawal",
   });
 
-  if (response.data && response.data.status === "success") {
+  if (response.data && response.data.status == "success") {
     await User.findByIdAndUpdate(userId, { $inc: { balance: -amount } }, { new: true });
   }
 

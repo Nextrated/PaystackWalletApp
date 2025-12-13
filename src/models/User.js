@@ -25,7 +25,8 @@ const userSchema = new mongoose.Schema(
     paystackRecipientCode: { type: String, default: null },
     DVA_Number: { type: String, default: null },
     DVA_bankName: { type: String, default: null },
-    DVA_accountName: { type: String, default: null }
+    DVA_accountName: { type: String, default: null },
+    isWithdrawing: { type: Boolean, default: false },
   },
   { timestamps: true }
 );

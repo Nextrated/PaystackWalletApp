@@ -28,7 +28,17 @@ export const paystackWebhook = async (req, res) => {
           const dvaAccountNum = data?.dedicated_account?.account_number;
           const dvaAccountName = data?.dedicated_account?.account_name;
           const dvaBankName = data?.dedicated_account?.bank?.name;
-         await User.findByIdAndUpdate(user._id,{$set: {DVA_Number:dvaAccountNum,DVA_bankName:dvaBankName,DVA_accountName: dvaAccountName}},{ new: true });
+          await User.findByIdAndUpdate(
+            user._id,
+            {
+              $set: {
+                DVA_Number: dvaAccountNum,
+                DVA_bankName: dvaBankName,
+                DVA_accountName: dvaAccountName,
+              },
+            },
+            { new: true }
+          );
         } catch (err) {
           console.error("Webhook post-ack error:", err);
         }
@@ -37,21 +47,26 @@ export const paystackWebhook = async (req, res) => {
     }
 
     if (event === "transfer.success") {
-      console.log(" transfer.success:", JSON.stringify(data, null, 2));
-      res.sendStatus(200);
-      (async () => {
-        try {
-          const userId = data?.metadata?.userId;
-          const amount = (data?.amount ?? 0) / 100; 
-          if (userId) {
-           await User.findByIdAndUpdate(userId, { $inc: { balance: -amount } }, { new: true }); 
-          }
+      try {
+        console.log("transfer.success:", JSON.stringify(data, null, 2));
 
-        } catch (err) {
-          console.error("Error processing transfer.success webhook:", err);
+        const userId = data?.metadata?.userId;
+        const amount = (data?.amount ?? 0) / 100;
+
+        if (!userId || amount <= 0) {
+          return res.sendStatus(400);
         }
-    })();
-      return;
+
+        await User.findByIdAndUpdate(userId, {
+          $inc: { balance: -amount },
+          $set: { isWithdrawing: false },
+        });
+
+        return res.sendStatus(200);
+      } catch (err) {
+        console.error("Error processing transfer.success webhook:", err);
+        return res.sendStatus(500);
+      }
     }
 
     if (event === "charge.success") {
@@ -74,7 +89,9 @@ export const paystackWebhook = async (req, res) => {
             const receiverAcct = data?.metadata?.receiver_account_number;
             const email = data?.customer?.email;
 
-            const userByDVA = await User.findOne({ email }).select("DVA_Number");
+            const userByDVA = await User.findOne({ email }).select(
+              "DVA_Number"
+            );
             if (userByDVA && userByDVA.DVA_Number === receiverAcct) {
               await User.findByIdAndUpdate(
                 userByDVA._id,

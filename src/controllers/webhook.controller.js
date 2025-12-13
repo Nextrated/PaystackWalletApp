@@ -50,7 +50,7 @@ export const paystackWebhook = async (req, res) => {
       try {
         console.log("transfer.success:", JSON.stringify(data, null, 2));
 
-        const userId = data?.metadata?.userId;
+        const userId = data?.recipient?.metadata?.userId;
         const amount = (data?.amount ?? 0) / 100;
 
         if (!userId || amount <= 0) {

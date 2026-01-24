@@ -4,17 +4,27 @@ import { User } from "../models/User.js";
 export const paystackWebhook = async (req, res) => {
   try {
     const signature = req.headers["x-paystack-signature"];
-    if (!signature) return res.sendStatus(400);
+    if (!signature) {
+      return res.status(400).json({
+        success: false,
+        message: "Missing signature header"
+      });
+    }
 
     const ok = verifySignature(req.body, signature);
-    if (!ok) return res.sendStatus(401);
+    if (!ok) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid signature"
+      });
+    }
 
     const payload = JSON.parse(req.body.toString("utf8"));
     const { event, data } = payload;
 
     // Handle events
     if (event === "dedicatedaccount.assign.success") {
-      res.sendStatus(200); // ack immediately
+      res.sendStatus(200); // acknowledge immediately
 
       // fire & forget
       (async () => {
@@ -51,10 +61,13 @@ export const paystackWebhook = async (req, res) => {
         console.log("transfer.success:", JSON.stringify(data, null, 2));
 
         const userId = data?.recipient?.metadata?.userId;
-        const amount = (data?.amount ?? 0) / 100;
+        const amount = (data?.amount ?? 0) / 100; // Paystack sends amounts in kobo, convert to NGN
 
         if (!userId || amount <= 0) {
-          return res.sendStatus(400);
+          return res.status(400).json({
+            success: false,
+            message: "Invalid webhook payload: missing userId or invalid amount"
+          });
         }
 
         await User.findByIdAndUpdate(userId, {
@@ -65,7 +78,11 @@ export const paystackWebhook = async (req, res) => {
         return res.sendStatus(200);
       } catch (err) {
         console.error("Error processing transfer.success webhook:", err);
-        return res.sendStatus(500);
+        return res.status(500).json({
+          success: false,
+          message: "Internal error processing transfer success",
+          error: { code: "WEBHOOK_PROCESSING_ERROR" }
+        });
       }
     }
 
@@ -79,13 +96,17 @@ export const paystackWebhook = async (req, res) => {
           const amountNgn = (data?.amount ?? 0) / 100;
 
           if (userId && Number.isFinite(amountNgn)) {
+            // Path 1: Direct funding via card/bank transfer
+            // When user clicks "Fund Wallet", we pass their userId in metadata
             await User.findByIdAndUpdate(
               userId,
               { $inc: { balance: amountNgn } },
               { new: true }
             );
           } else {
-            // DVA path
+            // Path 2: DVA funding via bank transfer
+            // When user transfers from their bank to their DVA, Paystack doesn't know
+            // our userId. We need to match by email + DVA account number.
             const receiverAcct = data?.metadata?.receiver_account_number;
             const email = data?.customer?.email;
 
@@ -109,8 +130,15 @@ export const paystackWebhook = async (req, res) => {
 
     // Default ack for unhandled events
     return res.sendStatus(200);
+
   } catch (err) {
     console.error("Webhook error:", err);
-    return res.sendStatus(500);
+    return res.status(500).json({
+      success: false,
+      message: "Webhook processing failed",
+      error: {
+        code: "WEBHOOK_ERROR"
+      }
+    });
   }
 };

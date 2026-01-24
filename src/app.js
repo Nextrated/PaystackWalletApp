@@ -29,10 +29,12 @@ app.use(uiRoutes);
 // Health
 app.get("/health", (_req, res) => res.json({ ok: true }));
 
-// Webhook FIRST (raw body)
+// CRITICAL: Webhook route MUST come before express.json()
+// Paystack signature verification requires the raw request body
+// If we parse to JSON first, signature verification will fail
 app.use(webhookRoutes);
 
-// JSON parser for normal routes
+// All other routes can use JSON parser
 app.use(express.json({ limit: "1mb" }));
 
 // App routes

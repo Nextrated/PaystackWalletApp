@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Verify Card BIN</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="container">
+      <section class="auth-card">
+        <div style="text-align: right; margin-bottom: 1rem;">
+          <a href="/dashboard" class="btn brand">Back to Dashboard</a>
+        </div>
+
+        <h1>Verify Card BIN</h1>
+        <form id="verify-bin-form" novalidate>
+          <label for="bin">Card BIN</label>
+          <input
+            type="text"
+            id="bin"
+            name="bin"
+            placeholder="Enter Card BIN"
+            required
+          />
+
+          <button class="btn brand mt-2" type="submit">Verify BIN</button>
+        </form>
+        <div id="message" class="msg"></div>
+      </section>
+    </div>
+
+    <script type="module">
+      import { API_BASE_URL } from "./config.js";
+
+      const token = localStorage.getItem("token");
+      if (!token) window.location.href = "/login";
+
+      const form = document.getElementById("verify-bin-form");
+      const msgEl = document.getElementById("message");
+
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        msgEl.textContent = "";
+        msgEl.className = "msg";
+
+        const formData = new FormData(form);
+        const data = Object.fromEntries(formData);
+
+        // Optional: Basic client-side BIN validation (6 digits)
+        if (!/^\d{6}$/.test(data.bin)) {
+          msgEl.textContent = "Please enter a valid 6-digit BIN.";
+          msgEl.className = "msg error";
+          return;
+        }
+
+        try {
+          const response = await fetch(
+            `${API_BASE_URL}/verify-card-bin/${data.bin}`,
+            {
+              method: "GET",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+              },
+            }
+          );
+
+          const result = await response.json();
+
+          if (response.ok && result.success) {
+            const cardData = result.data;
+
+            msgEl.innerHTML = `
+              <strong>BIN Verified Successfully</strong><br><br>
+              <strong>Card Brand:</strong> ${cardData.brand} ${
+                cardData.sub_brand ? "(" + cardData.sub_brand + ")" : ""
+              }<br>
+              <strong>Card Type:</strong> ${cardData.card_type.toUpperCase()} ${
+                cardData.card_type === "credit" ? "Card" : "Card"
+              }<br>
+              <strong>Bank:</strong> ${cardData.bank || "Not specified"}<br>
+              <strong>Country:</strong> ${cardData.country_name} (${cardData.country_code})<br>
+              <strong>Currency:</strong> ${cardData.currency}<br>
+            `;
+            msgEl.className = "msg success";
+          } else {
+            msgEl.textContent = result.message || result.error || "BIN verification failed.";
+            msgEl.className = "msg error";
+          }
+        } catch (err) {
+          msgEl.textContent = err.message || "An error occurred";
+          msgEl.className = "msg error";
+        }
+      });
+    </script>
+  </body>
+</html>

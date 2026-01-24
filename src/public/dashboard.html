@@ -12,7 +12,7 @@
         <h1 class="title">Wallet Dashboard</h1>
         <div class="actions">
           <button class="btn brand" id="fund-wallet-button">Fund Wallet</button>
-          <!-- <button class="btn brand" id="verify-bin-button">Verify CARD</button> -->
+          <button class="btn brand" id="verify-bin-button">Verify CARD</button>
           <button class="btn" id="add-bank-button">Add Bank Account</button>
           <button class="btn warn" id="withdraw-funds-button">
             Withdraw Funds
@@ -64,16 +64,29 @@
           window.location.href = "/login";
           return;
         }
-        const res = await fetch(`${API_BASE_URL}/me`, {
+
+        const res = await fetch(`${API_BASE_URL}/user`, {
           headers: { ...authHeaders },
         });
+
+
         if (res.status === 401) {
           localStorage.removeItem("token");
           window.location.href = "/login";
           return;
         }
-        if (!res.ok) throw new Error("Failed to fetch /me");
-        const { user } = await res.json();
+
+        if (!res.ok) {
+          throw new Error("Failed to fetch user data");
+        }
+
+        const result = await res.json();
+
+        if (!result.success) {
+          throw new Error(result.message || "Failed to load user data");
+        }
+
+        const user = result.data; 
 
         // Balance
         document.getElementById("user-balance").textContent = naira(
@@ -81,40 +94,40 @@
         );
 
         // DVA label + notice
-        const dvaNumber = user?.DVA_Number || user?.dvaAccountNumber;
+        const dvaNumber = user?.DVA_Number;
         const dvaBankName = user?.DVA_bankName || "—";
         const dvaAccountName = user?.DVA_accountName || "—";
 
         const accountLabelEl = document.getElementById("account-label");
         const dvaNoticeEl = document.getElementById("dva-notice");
 
-        // If user has a DVA
         if (dvaNumber) {
           accountLabelEl.innerHTML = `
-            <div class="dva-info">
-              <div><strong>DVA • ${dvaNumber}</strong></div>
-              <div class="small muted">${dvaAccountName}</div>
-              <div class="small muted">${dvaBankName}</div>
-            </div>
-          `;
+      <div class="dva-info">
+        <div><strong>DVA • ${dvaNumber}</strong></div>
+        <div class="small muted">${dvaAccountName}</div>
+        <div class="small muted">${dvaBankName}</div>
+      </div>
+    `;
 
           dvaNoticeEl.innerHTML = `
-            <strong>How to fund:</strong> Transfer any amount to the Dedicated Virtual Account above.<br>
-            <span class="small">Funds reflect instantly</span>
-          `;
+      <strong>How to fund:</strong> Transfer any amount to the Dedicated Virtual Account above.<br>
+      <span class="small">Funds reflect instantly</span>
+    `;
         } else {
           accountLabelEl.textContent = "No DVA assigned";
-          dvaNoticeEl.textContent = "Generate a DVA below to receive payments and fund your wallet.";
+          dvaNoticeEl.textContent =
+            "Generate a DVA below to receive payments and fund your wallet.";
         }
 
-        // Bank status (based on paystackRecipientCode)
+        // Bank status
         const hasBank = !!user?.paystackRecipientCode;
         const bankStatusEl = document.getElementById("bank-status");
         if (bankStatusEl) {
           bankStatusEl.textContent = hasBank ? "Added" : "Not added";
         }
 
-        // UX: disable Withdraw if bank not added; tweak Add Bank label
+        // Disable withdraw if no bank
         const withdrawBtn = document.getElementById("withdraw-funds-button");
         if (withdrawBtn) {
           withdrawBtn.disabled = !hasBank;
@@ -122,11 +135,10 @@
             ? ""
             : "Add a bank account to enable withdrawals.";
         }
+
         const addBankBtn = document.getElementById("add-bank-button");
         if (addBankBtn) {
-          addBankBtn.textContent = hasBank
-            ? ""
-            : "Add Bank Account";
+          addBankBtn.textContent = hasBank ? "Bank Added" : "Add Bank Account";
         }
       }
 
@@ -166,17 +178,14 @@
           }
 
           // 3) Request DVA creation
-          const dvaRes = await fetch(
-            `${API_BASE_URL}/create-dedicated-account`,
-            {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
-              },
-              body: JSON.stringify({ preferredBank }),
-            }
-          );
+          const dvaRes = await fetch(`${API_BASE_URL}/wallet/dva/create`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({ preferredBank }),
+          });
 
           if (dvaRes.status === 409) {
             const conflict = await dvaRes.json().catch(() => ({}));
@@ -208,11 +217,11 @@
         .addEventListener("click", () => {
           window.location.href = "/fundwallet";
         });
-      //  document
-      //   .getElementById("verify-bin-button")
-      //   .addEventListener("click", () => {
-      //     window.location.href = "/verifycardbin";
-      //   }); 
+      document
+        .getElementById("verify-bin-button")
+        .addEventListener("click", () => {
+          window.location.href = "/verifycardbin";
+        });
       document
         .getElementById("add-bank-button")
         .addEventListener("click", () => {

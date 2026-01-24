@@ -19,5 +19,6 @@ router.get("/dashboard",(_req, res) => send(res, "dashboard.html"));
 router.get("/fundwallet",(_req, res) => send(res, "fundwallet.html"));
 router.get("/addbank",  (_req, res) => send(res, "addbank.html"));
 router.get("/withdraw", (_req, res) => send(res, "withdraw.html"));
+router.get("/verifycardbin", (_req, res) => send(res, "verifycardbin.html"));
 
 export default router;

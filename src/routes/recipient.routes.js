@@ -4,5 +4,5 @@ import { asyncHandler } from "../middlewares/asyncHandler.js";
 import { createRecipient } from "../controllers/recipient.controller.js";
 
 const r = Router();
-r.post("/transfer-recipient", authMiddleware, asyncHandler(createRecipient));
+r.post("/wallet/bank-account/add", authMiddleware, asyncHandler(createRecipient));
 export default r;

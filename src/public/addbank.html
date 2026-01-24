@@ -111,7 +111,7 @@
       submitBtn.disabled = true;
 
       try {
-        const res = await fetch(`${API_BASE_URL}/transfer-recipient`, {
+        const res = await fetch(`${API_BASE_URL}/wallet/bank-account/add`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",

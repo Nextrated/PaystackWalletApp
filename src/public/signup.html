@@ -89,7 +89,7 @@
         }
 
         // Save token and go to dashboard
-        localStorage.setItem("token", loginData.token);
+        localStorage.setItem("token", loginData.data.token);
         showMsg("Account created! Redirecting to dashboard…", "success");
         setTimeout(() => (window.location.href = "/dashboard"), 900);
 

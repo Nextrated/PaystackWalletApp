@@ -35,7 +35,7 @@ export const initPayment = async (req, res) => {
     // 3. Prepare Paystack payload
     const payload = {
       email: req.user.email,
-      amount: amountNum * 100, // convert to kobo
+      amount: amountNum * 100, // Paystack API expects amounts in kobo (1 NGN = 100 kobo)
       currency: "NGN",
       metadata: {
         userId: user._id, 
@@ -134,7 +134,9 @@ export const withdraw = async (req, res) => {
       });
     }
 
-    // 5. Acquire lock
+    // 5. Prevent concurrent withdrawals using optimistic locking
+    // This atomic operation will only succeed if isWithdrawing is currently false
+   // If two withdrawal requests come in simultaneously, only one will acquire the lock
     const lockedUser = await User.findOneAndUpdate(
       { _id: userId, isWithdrawing: false },
       { $set: { isWithdrawing: true } },

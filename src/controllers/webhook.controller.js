@@ -93,7 +93,7 @@ export const paystackWebhook = async (req, res) => {
       (async () => {
         try {
           const userId = data?.metadata?.userId;
-          const amountNgn = (data?.amount ?? 0) / 100;
+          const amountNgn = (data?.amount ?? 0) / 100; // Paystack sends amounts in kobo, convert to NGN
 
           if (userId && Number.isFinite(amountNgn)) {
             // Path 1: Direct funding via card/bank transfer

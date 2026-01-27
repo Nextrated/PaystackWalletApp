@@ -52,7 +52,7 @@
           msgEl.className = "msg success";
           setTimeout(() => (window.location.href = "/dashboard"), 800);
         } else {
-          msgEl.textContent = result.error || "Login failed.";
+          msgEl.textContent = result.message || "Login failed.";
           msgEl.className = "msg error";
         }
       } catch (err) {

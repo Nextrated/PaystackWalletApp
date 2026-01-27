@@ -58,7 +58,7 @@
 
         const data = await res.json();
         if (!res.ok) {
-          throw new Error(data.error || "Withdrawal failed");
+          throw new Error(data.message || "Withdrawal failed");
         }
 
         msgEl.textContent = "Withdrawal initiated successfully!";

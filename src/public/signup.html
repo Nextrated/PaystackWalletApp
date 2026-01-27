@@ -73,7 +73,7 @@
         const result = await res.json();
 
         if (!res.ok) {
-          return showMsg(result?.error || "Sign up failed.");
+          return showMsg(result?.message || "Sign up failed.");
         }
 
         // 2. Immediately log in
@@ -85,7 +85,7 @@
         const loginData = await loginRes.json();
 
         if (!loginRes.ok) {
-          return showMsg(loginData?.error || "Signup ok, but login failed.");
+          return showMsg(loginData?.message || "Signup ok, but login failed.");
         }
 
         // Save token and go to dashboard

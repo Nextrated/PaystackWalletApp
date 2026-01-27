@@ -3,6 +3,7 @@ import jwt from "jsonwebtoken";
 import { User } from "../models/User.js";
 import { config } from "../config/env.js";
 
+
 export const register = async (req, res) => {
   try {
     // Ensure Content-Type is application/json
@@ -27,6 +28,8 @@ export const register = async (req, res) => {
         message: "Invalid input. 'lastName' must be a non-empty string."
       });
     }
+
+    
     if (typeof email !== "string" || email.trim() === "") {
       return res.status(400).json({
         success: false,
@@ -50,10 +53,10 @@ export const register = async (req, res) => {
       });
     }
     const phoneClean = phone.trim();
-    if (!/^\d+$/.test(phoneClean)) {
+    if (!/^\d{11}$/.test(phoneClean)) {
       return res.status(400).json({
         success: false,
-        message: "Invalid phone. Only digits are allowed."
+        message: "Invalid phone. Phone number must be 11 digits."
       });
     }
 
